@@ -67,6 +67,22 @@ At this scale the ripple looks like a solid band. After a very short start-up, t
 
 The averaged model replaces the switching voltage with a constant duty × V = 2 V. The two speed curves lie on top of each other. At 0.05 s, the PWM run reaches 74.659 rpm and the averaged run 74.639 rpm, a difference of +0.026%. The averaged current is a flat line at about 0.066 A, which matches the mean of the PWM ripple over the last 10 ms (0.0661 A). The averaged model therefore loses the ripple but keeps the speed and mean current, which is what the speed controller cares about.
 
+### Step 3c: Current limit (demo)
+
+The drive switches the voltage off whenever the current reaches a limit, and back on once it drops below it. The demo uses 100% duty, so without a limit the current would head for the full stall value. The limit is set to 0.08 A on purpose, half of I_max (0.16 A), so its effect is easy to see. The run covers 0 to 0.01 s with `max_step=1e-7`.
+
+**Zoom (first 500 µs)**
+
+![Step 3c current limit zoom](figures/step3c_current_limit_zoom.png)
+
+**Overview (0 to 0.01 s)**
+
+![Step 3c current limit overview](figures/step3c_current_limit_overview.png)
+
+The current rises from zero and reaches 0.08 A after about 22 µs. From then on it stays pinned at the limit (0.07999 to 0.08003 A after 5 ms). With the current held constant, the torque is constant too, so the speed rises in a straight line to about 18 rpm at 0.01 s.
+
+Note: this limiter switches on and off at every solver step around the limit, so in the model its switching rate is set by `max_step`, not by real hardware. A real driver would usually limit once per PWM cycle or use a small hysteresis band.
+
 ## How to run
 
 ```bash
@@ -76,6 +92,7 @@ pip install -r requirements.txt
 python src/step2_motor_model.py
 python src/step3_pwm_drive.py
 python src/step3b_average_vs_pwm.py
+python src/step3c_current_limit.py
 ```
 
 Each script opens a plot window and saves its figures to `figures/`.
@@ -89,6 +106,7 @@ src/
   step2_motor_model.py    # Step 2: open-loop motor model
   step3_pwm_drive.py      # Step 3: PWM drive
   step3b_average_vs_pwm.py  # Step 3b: averaged model vs PWM
+  step3c_current_limit.py   # Step 3c: current limit demo
   (step4_pid.py, step5_stability.py to come)
 figures/                  # plots saved by the scripts
 simulink/                 # Step 6 models (placeholder)
