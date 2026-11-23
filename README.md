@@ -61,6 +61,12 @@ The current follows a saw-tooth. It rises during the on-time and falls during th
 
 At this scale the ripple looks like a solid band. After a very short start-up, the current settles into the same 0.04 to 0.10 A band. The speed rises almost linearly and reaches about 74.7 rpm at 0.05 s. This is the very start of a spin-up that takes seconds (see Step 2).
 
+**Averaged model vs PWM (0 to 0.05 s, same solver settings)**
+
+![Step 3b averaged model vs PWM](figures/step3b_average_vs_pwm.png)
+
+The averaged model replaces the switching voltage with a constant duty × V = 2 V. The two speed curves lie on top of each other. At 0.05 s, the PWM run reaches 74.659 rpm and the averaged run 74.639 rpm, a difference of +0.026%. The averaged current is a flat line at about 0.066 A, which matches the mean of the PWM ripple over the last 10 ms (0.0661 A). The averaged model therefore loses the ripple but keeps the speed and mean current, which is what the speed controller cares about.
+
 ## How to run
 
 ```bash
@@ -69,6 +75,7 @@ python -m venv .venv
 pip install -r requirements.txt
 python src/step2_motor_model.py
 python src/step3_pwm_drive.py
+python src/step3b_average_vs_pwm.py
 ```
 
 Each script opens a plot window and saves its figures to `figures/`.
@@ -81,6 +88,7 @@ requirements.txt
 src/
   step2_motor_model.py    # Step 2: open-loop motor model
   step3_pwm_drive.py      # Step 3: PWM drive
+  step3b_average_vs_pwm.py  # Step 3b: averaged model vs PWM
   (step4_pid.py, step5_stability.py to come)
 figures/                  # plots saved by the scripts
 simulink/                 # Step 6 models (placeholder)
