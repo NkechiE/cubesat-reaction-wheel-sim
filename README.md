@@ -8,7 +8,7 @@ This project simulates the drive of a small CubeSat-class reaction wheel: a brus
 
 - [x] Step 2: Open-loop DC motor model, scaled to a CubeSat wheel
 - [x] Step 3: PWM drive
-- [ ] Step 4: PID speed control
+- [x] Step 4: PID speed control
 - [ ] Step 5: Stability analysis (Bode plot, gain and phase margin)
 - [ ] Step 6: Simulink rebuild
 - [ ] Step 7: Python vs Simulink comparison
@@ -83,6 +83,15 @@ The current rises from zero and reaches 0.08 A after about 22 µs. From then on 
 
 Note: this limiter switches on and off at every solver step around the limit, so in the model its switching rate is set by `max_step`, not by real hardware. A real driver would usually limit once per PWM cycle or use a small hysteresis band.
 
+### Step 4: PID speed control
+
+A PID controller sets the duty cycle (clipped to 0 to 1) from the speed error. The motor sees the averaged voltage duty × V, as checked in Step 3b. The derivative term acts on the measured acceleration rather than the error. The integral is frozen while the duty cycle is saturated (anti-windup). Gains: Kp = 0.01, Ki = 0.002, Kd = 0.005. Target: 10,000 rpm from rest, simulated for 30 s.
+
+![Step 4 PID with anti-windup](figures/step4_pid_antiwindup.png)
+
+- **Speed** rises with the duty cycle stuck at 100% until about 2.8 s, reaches 90% of the target at about 3.5 s, and stays within 2% of the target after about 5.6 s. It approaches the target from below without overshooting and ends at 9,999.5 rpm at 30 s.
+- **Current** starts at about 0.166 A (the same start-up peak as Step 2, slightly above I_max, because there is no current limit in this model). It drops sharply once the controller leaves saturation, then settles at about 0.004 A, with a final duty cycle of about 0.55.
+
 ## How to run
 
 ```bash
@@ -93,6 +102,7 @@ python src/step2_motor_model.py
 python src/step3_pwm_drive.py
 python src/step3b_average_vs_pwm.py
 python src/step3c_current_limit.py
+python src/step4_pid.py
 ```
 
 Each script opens a plot window and saves its figures to `figures/`.
@@ -107,7 +117,8 @@ src/
   step3_pwm_drive.py      # Step 3: PWM drive
   step3b_average_vs_pwm.py  # Step 3b: averaged model vs PWM
   step3c_current_limit.py   # Step 3c: current limit demo
-  (step4_pid.py, step5_stability.py to come)
+  step4_pid.py              # Step 4: PID speed control with anti-windup
+  (step5_stability.py to come)
 figures/                  # plots saved by the scripts
 simulink/                 # Step 6 models (placeholder)
 ```
