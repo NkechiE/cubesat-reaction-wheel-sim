@@ -85,12 +85,37 @@ Note: this limiter switches on and off at every solver step around the limit, so
 
 ### Step 4: PID speed control
 
-A PID controller sets the duty cycle (clipped to 0 to 1) from the speed error. The motor sees the averaged voltage duty × V, as checked in Step 3b. The derivative term acts on the measured acceleration rather than the error. The integral is frozen while the duty cycle is saturated (anti-windup). Gains: Kp = 0.01, Ki = 0.002, Kd = 0.005. Target: 10,000 rpm from rest, simulated for 30 s.
+The controller sets the duty cycle (clipped to 0 to 1) from the speed error. The motor sees the averaged voltage duty × V, as checked in Step 3b. The derivative term acts on the measured acceleration rather than on the error. Target: 10,000 rpm from rest, simulated for 30 s. One script runs five controller settings so the progression is visible:
+
+| Case | Kp | Ki | Kd | Anti-windup | Final speed | Peak speed | Overshoot | 2% settling time |
+|---|---|---|---|---|---|---|---|---|
+| 1. P only | 0.001 | 0 | 0 | No | 6,561.7 rpm | 6,561.7 rpm | 0% | Not settled in 30 s |
+| 2. P only | 0.01 | 0 | 0 | No | 9,502.1 rpm | 9,502.1 rpm | 0% | Not settled in 30 s |
+| 3. PI | 0.01 | 0.002 | 0 | No | 10,018.3 rpm | 12,254.6 rpm | 22.55% | 18.02 s |
+| 4. PI | 0.01 | 0.002 | 0 | Yes | 9,997.6 rpm | 9,997.6 rpm | 0% | 7.92 s |
+| 5. PID | 0.01 | 0.002 | 0.005 | Yes | 9,999.5 rpm | 9,999.5 rpm | 0% | 5.61 s |
+
+**1. P only, Kp = 0.001.** The speed levels off at about 6,560 rpm, well below the target. A proportional controller needs a remaining error to keep producing a duty cycle.
+
+![Step 4 P only, Kp = 0.001](figures/step4_p_kp001.png)
+
+**2. P only, Kp = 0.01.** A higher gain gets closer (about 9,500 rpm) but still leaves a steady error of about 5%.
+
+![Step 4 P only, Kp = 0.01](figures/step4_p_kp01.png)
+
+**3. PI, no anti-windup.** The integral term removes the steady error, but the speed overshoots to about 12,250 rpm and takes 18 s to settle. While the duty cycle is stuck at 100% during spin-up, the integral keeps adding up error it cannot act on ("windup"). It then has to unwind, and during that time the duty cycle is clipped to 0 and the current briefly goes slightly negative (braking).
+
+![Step 4 PI without anti-windup](figures/step4_pi_windup.png)
+
+**4. PI with anti-windup.** Anti-windup freezes the integral while the duty cycle is saturated, so it only builds up once the controller can actually act. The overshoot disappears and the speed settles within 2% after 7.9 s.
+
+![Step 4 PI with anti-windup](figures/step4_pi_antiwindup.png)
+
+**5. PID with anti-windup.** Adding the D term shortens the 2% settling time to 5.6 s, still without overshoot. Comparing cases 3 and 4 shows that anti-windup, not the D term, is what removed the overshoot. Step 5 looks at whether the D term is worth keeping.
 
 ![Step 4 PID with anti-windup](figures/step4_pid_antiwindup.png)
 
-- **Speed** rises with the duty cycle stuck at 100% until about 2.8 s, reaches 90% of the target at about 3.5 s, and stays within 2% of the target after about 5.6 s. It approaches the target from below without overshooting and ends at 9,999.5 rpm at 30 s.
-- **Current** starts at about 0.166 A (the same start-up peak as Step 2, slightly above I_max, because there is no current limit in this model). It drops sharply once the controller leaves saturation, then settles at about 0.004 A, with a final duty cycle of about 0.55.
+In every case the current starts at about 0.166 A, slightly above I_max, because this model has no current limit.
 
 ### Step 5: Stability analysis (Bode plots)
 
@@ -136,7 +161,7 @@ src/
   step3_pwm_drive.py      # Step 3: PWM drive
   step3b_average_vs_pwm.py  # Step 3b: averaged model vs PWM
   step3c_current_limit.py   # Step 3c: current limit demo
-  step4_pid.py              # Step 4: PID speed control with anti-windup
+  step4_pid.py              # Step 4: P, PI and PID speed control, with and without anti-windup
   step5_bode.py             # Step 5: open-loop Bode plots and stability margins (PI and PID)
 figures/                  # plots saved by the scripts
 simulink/                 # Step 6 models (placeholder)
