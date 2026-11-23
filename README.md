@@ -7,7 +7,7 @@ This project simulates the drive of a small CubeSat-class reaction wheel: a brus
 ## Roadmap
 
 - [x] Step 2: Open-loop DC motor model, scaled to a CubeSat wheel
-- [ ] Step 3: PWM drive
+- [x] Step 3: PWM drive
 - [ ] Step 4: PID speed control
 - [ ] Step 5: Stability analysis (Bode plot, gain and phase margin)
 - [ ] Step 6: Simulink rebuild
@@ -43,6 +43,24 @@ This shows a 5 V step applied to the motor at rest, simulated for 30 s:
 
 For comparison with the listed targets: the simulated peak torque (Kt × peak current) is about 0.42 mNm, and the momentum at t = 30 s (J × ω) is about 2.02 mNms. The peak current (0.166 A) goes slightly above I_max (0.16 A), because this open-loop model has no current limit yet. Current limiting is planned for Step 3.
 
+### Step 3: PWM drive
+
+PWM (pulse-width modulation) switches the full supply voltage on and off very quickly. Changing the duty cycle changes the *average* voltage the motor sees. The switch is either fully on or fully off, so little power is lost as heat, unlike a linear driver that burns the extra voltage. Simulating every 50 µs switching edge needs microsecond time steps, so PWM is only simulated in short windows. Long runs (PID, stability) will use the averaged model, after checking below that it matches.
+
+Settings: 5 V supply, 20 kHz switching (50 µs period), 40% duty cycle, starting at rest, 0 to 0.05 s.
+
+**Zoom (t = 40.0 to 40.2 ms, about 4 switching cycles)**
+
+![Step 3 PWM zoom](figures/step3_pwm_zoom.png)
+
+The current follows a saw-tooth. It rises during the on-time and falls during the off-time, between about 0.039 A and 0.096 A. Over this short window the speed is flat at about 60 rpm.
+
+**Overview (0 to 0.05 s)**
+
+![Step 3 PWM overview](figures/step3_pwm_overview.png)
+
+At this scale the ripple looks like a solid band. After a very short start-up, the current settles into the same 0.04 to 0.10 A band. The speed rises almost linearly and reaches about 74.7 rpm at 0.05 s. This is the very start of a spin-up that takes seconds (see Step 2).
+
 ## How to run
 
 ```bash
@@ -50,9 +68,10 @@ python -m venv .venv
 # Windows: .venv\Scripts\activate    macOS/Linux: source .venv/bin/activate
 pip install -r requirements.txt
 python src/step2_motor_model.py
+python src/step3_pwm_drive.py
 ```
 
-The script opens the plot window and saves it to `figures/step2_spinup.png`.
+Each script opens a plot window and saves its figures to `figures/`.
 
 ## Repository layout
 
@@ -61,8 +80,8 @@ README.md
 requirements.txt
 src/
   step2_motor_model.py    # Step 2: open-loop motor model
-  (step3_pwm_drive.py, step4_pid.py, step5_stability.py to come)
-figures/
-  step2_spinup.png
+  step3_pwm_drive.py      # Step 3: PWM drive
+  (step4_pid.py, step5_stability.py to come)
+figures/                  # plots saved by the scripts
 simulink/                 # Step 6 models (placeholder)
 ```

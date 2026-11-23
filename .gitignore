@@ -23,6 +23,7 @@ htmlcov/
 
 # Jupyter
 .ipynb_checkpoints/
+test.ipynb
 
 # IDE / OS
 .vscode/
