@@ -9,7 +9,7 @@ This project simulates the drive of a small CubeSat-class reaction wheel: a brus
 - [x] Step 2: Open-loop DC motor model, scaled to a CubeSat wheel
 - [x] Step 3: PWM drive
 - [x] Step 4: PID speed control
-- [ ] Step 5: Stability analysis (Bode plot, gain and phase margin)
+- [x] Step 5: Stability analysis (Bode plot, gain and phase margin)
 - [ ] Step 6: Simulink rebuild
 - [ ] Step 7: Python vs Simulink comparison
 
@@ -92,6 +92,24 @@ A PID controller sets the duty cycle (clipped to 0 to 1) from the speed error. T
 - **Speed** rises with the duty cycle stuck at 100% until about 2.8 s, reaches 90% of the target at about 3.5 s, and stays within 2% of the target after about 5.6 s. It approaches the target from below without overshooting and ends at 9,999.5 rpm at 30 s.
 - **Current** starts at about 0.166 A (the same start-up peak as Step 2, slightly above I_max, because there is no current limit in this model). It drops sharply once the controller leaves saturation, then settles at about 0.004 A, with a final duty cycle of about 0.55.
 
+### Step 5: Stability analysis (Bode plots)
+
+The open loop (controller × supply voltage × motor) is analysed for the PI controller (Kd = 0) and the PID controller (Kd = 0.005), with Kp = 0.01 and Ki = 0.002 in both. This is the linear model: it ignores the duty clipping and anti-windup, so the margins only describe the controller in its unsaturated operating region.
+
+- **Gain margin:** how much the loop gain could be multiplied before the system becomes unstable.
+- **Phase margin:** how much extra delay (phase lag) the loop could tolerate at the crossover frequency before it becomes unstable.
+
+![Step 5 Bode plot, PI](figures/step5_bode_pi.png)
+
+![Step 5 Bode plot, PID](figures/step5_bode_pid.png)
+
+| Controller | Gain margin | Phase margin | Crossover frequency |
+|---|---|---|---|
+| PI (Kd = 0) | Infinite | 90.1° | 3.93 rad/s (0.63 Hz) |
+| PID (Kd = 0.005) | Infinite | 120.6° | 50,760 rad/s (8,079 Hz) |
+
+**Conclusion.** The gain margin is infinite in both cases because the phase never reaches −180°, and both phase margins are healthy. However, the PID crossover is at about 8 kHz, in the electrical frequency range. A real digital controller would need a sample rate far above that, and the averaged PWM model from Step 3b is not valid that close to the 20 kHz switching frequency. The PI crossover is at about 4 rad/s, in the mechanical range, and is easy to implement. The D term is therefore not earning its place: in Step 4 it was the anti-windup, not the D term, that removed the overshoot.
+
 ## How to run
 
 ```bash
@@ -103,6 +121,7 @@ python src/step3_pwm_drive.py
 python src/step3b_average_vs_pwm.py
 python src/step3c_current_limit.py
 python src/step4_pid.py
+python src/step5_bode.py
 ```
 
 Each script opens a plot window and saves its figures to `figures/`.
@@ -118,7 +137,7 @@ src/
   step3b_average_vs_pwm.py  # Step 3b: averaged model vs PWM
   step3c_current_limit.py   # Step 3c: current limit demo
   step4_pid.py              # Step 4: PID speed control with anti-windup
-  (step5_stability.py to come)
+  step5_bode.py             # Step 5: open-loop Bode plots and stability margins (PI and PID)
 figures/                  # plots saved by the scripts
 simulink/                 # Step 6 models (placeholder)
 ```
