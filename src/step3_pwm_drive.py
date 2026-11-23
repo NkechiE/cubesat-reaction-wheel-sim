@@ -10,7 +10,7 @@ Ke = 0.0025    # back-EMF constant [V·s/rad]
 J  = 1.06e-6   # rotor + flywheel inertia [kg·m²]
 b  = 1e-8      # viscous friction [N·m·s/rad]
 V  = 5.0       # applied voltage [V]
-I_max = 0.16   # drive current limit [A] (will be used by the current limit in the next commit)
+I_max = 0.16   # drive current rating [A] (not used here; see step3c_current_limit.py)
 f_pwm = 20e3          # switching frequency [Hz]
 T_pwm = 1 / f_pwm     # period [s] = 50 µs
 duty = 0.4            # duty cycle (0 to 1)
