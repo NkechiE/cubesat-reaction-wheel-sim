@@ -23,6 +23,16 @@ sol = solve_ivp(motor_dynamics, (0, 30), [0, 0], method="Radau",
 #         pass max_step=1e-4, because the electrical dynamics are very fast
 #max_step= in what time interval to keep solving to get answers to plot gaps
 rpm = sol.y[1] * 60 / (2*np.pi)
+
+# Numbers quoted in the README
+i_sim = sol.y[0]
+print(f"Peak current: {i_sim.max():.4f} A, current at t = 30 s: {i_sim[-1]:.4f} A")
+print(f"Speed at t = 30 s: {rpm[-1]:.1f} rpm")
+print(f"Time to 63% of the 30 s speed: {sol.t[np.argmax(rpm >= 0.632*rpm[-1])]:.2f} s")
+print(f"Time to 95% of the 30 s speed: {sol.t[np.argmax(rpm >= 0.95*rpm[-1])]:.2f} s")
+print(f"Peak torque (Kt x peak current): {Kt*i_sim.max()*1e3:.3f} mNm")
+print(f"Momentum at t = 30 s (J x omega): {J*sol.y[1][-1]*1e3:.3f} mNms")
+
 fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True)
 ax1.plot(sol.t, sol.y[0])
 ax2.plot(sol.t, rpm)

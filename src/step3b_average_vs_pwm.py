@@ -46,6 +46,13 @@ print(f"Speed at t = {t_end} s, PWM model:      {end_pwm:.3f} rpm")
 print(f"Speed at t = {t_end} s, averaged model: {end_avg:.3f} rpm")
 print(f"Difference (PWM vs averaged):         {diff_pct:+.3f} %")
 
+# Mean PWM current over the last 10 ms (time-weighted, trapezoidal) vs averaged-model current
+last10 = sol_pwm.t >= t_end - 0.01
+t10, i10 = sol_pwm.t[last10], sol_pwm.y[0][last10]
+i_mean_pwm = np.sum(np.diff(t10) * (i10[1:] + i10[:-1]) / 2) / (t10[-1] - t10[0])
+print(f"Mean PWM current over the last 10 ms:  {i_mean_pwm:.4f} A")
+print(f"Averaged-model current at t = {t_end} s: {sol_avg.y[0][-1]:.4f} A")
+
 fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True)
 ax1.plot(sol_pwm.t, rpm_pwm, label="PWM")
 ax1.plot(sol_avg.t, rpm_avg, "--", label="Averaged (duty × V)")

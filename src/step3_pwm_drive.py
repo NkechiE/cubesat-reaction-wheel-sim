@@ -27,6 +27,13 @@ def motor_dynamics(t, x):
 # 0 to 0.05 s from rest; max_step is well below the 50 µs PWM period so every switching edge is resolved
 sol = solve_ivp(motor_dynamics, (0, 0.05), [0, 0], max_step=1e-6)
 rpm = sol.y[1] * 60 / (2*np.pi)
+
+# Numbers quoted in the README
+last10 = sol.t >= 0.04   # last 10 ms of the run
+print(f"Current ripple over the last 10 ms: min {sol.y[0][last10].min():.4f} A, max {sol.y[0][last10].max():.4f} A")
+print(f"Speed in the zoom window (t = 40.1 ms): {np.interp(0.0401, sol.t, rpm):.1f} rpm")
+print(f"Speed at t = 0.05 s: {rpm[-1]:.2f} rpm")
+
 fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True)
 ax1.plot(sol.t, sol.y[0])
 ax2.plot(sol.t, rpm)

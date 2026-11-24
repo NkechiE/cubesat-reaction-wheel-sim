@@ -34,6 +34,14 @@ def motor_dynamics(t, x):
 # 0 to 0.01 s from rest; max_step = 0.1 µs, so the limit switching and the 50 µs PWM period are both resolved
 sol = solve_ivp(motor_dynamics, (0, 0.01), [0, 0], max_step=1e-7)
 rpm = sol.y[1] * 60 / (2*np.pi)
+
+# Numbers quoted in the README
+i_sim = sol.y[0]
+print(f"Time to reach the current limit: {sol.t[np.argmax(i_sim >= I_limit)]*1e6:.1f} us")
+after5 = sol.t >= 0.005
+print(f"Current after 5 ms: min {i_sim[after5].min():.5f} A, max {i_sim[after5].max():.5f} A")
+print(f"Speed at t = 0.01 s: {rpm[-1]:.2f} rpm")
+
 fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True)
 ax1.plot(sol.t, sol.y[0])
 ax2.plot(sol.t, rpm)
