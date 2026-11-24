@@ -2,7 +2,15 @@
 
 ## Project goal
 
-This project simulates the drive of a small CubeSat-class reaction wheel: a brushed DC motor model, a PWM motor driver, and a PID speed controller. The stability of the closed loop will then be checked with frequency-domain tools. The aim is to build the full chain step by step in Python, then rebuild it in Simulink and compare the two.
+This project simulates the drive of a small CubeSat-class reaction wheel: a brushed DC motor model, a PWM motor driver, and a PID speed controller. The stability of the closed loop is then checked with frequency-domain tools. The full chain is built step by step in Python, and the motor model is rebuilt in Simulink and compared against the Python version.
+
+## What this project demonstrates
+
+- **Modelling an electromechanical system from first principles:** two coupled equations (electrical and mechanical) for a DC motor and flywheel. Open loop, the model spins up to about 18,190 rpm and 2.02 mNms, close to the listed 18,000 rpm and 2 mNms.
+- **Simulating a switching drive:** a 20 kHz PWM driver, checked against a simpler averaged model (0.026% difference in speed), plus a current-limit demo.
+- **Diagnosing and fixing integral windup:** a PI controller overshoots by 22.6% because its integral builds up while the drive is saturated. Anti-windup removes the overshoot completely.
+- **Frequency-domain stability analysis:** Bode plots and stability margins show that adding a D term pushes the crossover frequency to about 8 kHz, too fast for a realistic controller. The simpler PI controller is the better choice.
+- **Cross-validation in two independent tools:** the same motor model built in Simulink from basic blocks matches the Python result to within 0.013%.
 
 ## Roadmap
 
@@ -10,8 +18,8 @@ This project simulates the drive of a small CubeSat-class reaction wheel: a brus
 - [x] Step 3: PWM drive
 - [x] Step 4: PID speed control
 - [x] Step 5: Stability analysis (Bode plot, gain and phase margin)
-- [ ] Step 6: Simulink rebuild
-- [ ] Step 7: Python vs Simulink comparison
+- [x] Step 6: Simulink rebuild
+- [x] Step 7: Python vs Simulink comparison
 
 ## Model parameters
 
@@ -23,7 +31,7 @@ This project simulates the drive of a small CubeSat-class reaction wheel: a brus
 | Back-EMF / torque constant Ke = Kt | 0.0025 V·s/rad (= N·m/A) | My modelling choice |
 | Rotor + wheel inertia J | 1.06e-6 kg·m² | Derived from listed momentum ÷ listed max speed (2 mNms ÷ 18,000 rpm), to be verified |
 | Viscous friction b | 1e-8 N·m·s/rad | My modelling choice |
-| Drive current limit I_max | 0.16 A (not used until Step 3) | My modelling choice |
+| Drive current rating I_max | 0.16 A (reference value; not enforced in the models) | My modelling choice |
 | Peak torque (target) | 0.4 mNm | From public product listing, to be verified |
 | Max speed (target) | 18,000 rpm | From public product listing, to be verified |
 | Angular momentum (target) | 2 mNms | From public product listing, to be verified |
@@ -41,7 +49,7 @@ This shows a 5 V step applied to the motor at rest, simulated for 30 s:
 - **Current** (top) jumps almost immediately to its peak of about 0.166 A. It then decays smoothly as back-EMF builds up, ending at about 0.008 A at t = 30 s.
 - **Speed** (bottom) rises like a first-order system. It reaches 63% of its 30 s value after about 4.8 s, 95% after about 14.4 s, and is nearly flat at about 18,190 rpm by t = 30 s.
 
-For comparison with the listed targets: the simulated peak torque (Kt × peak current) is about 0.42 mNm, and the momentum at t = 30 s (J × ω) is about 2.02 mNms. The peak current (0.166 A) goes slightly above I_max (0.16 A), because this open-loop model has no current limit yet. Current limiting is planned for Step 3.
+For comparison with the listed targets: the simulated peak torque (Kt × peak current) is about 0.42 mNm, and the momentum at t = 30 s (J × ω) is about 2.02 mNms. The peak current (0.166 A) goes slightly above I_max (0.16 A), because this open-loop model has no current limit. A current-limit demo follows in Step 3c.
 
 ### Step 3: PWM drive
 
@@ -133,7 +141,22 @@ The open loop (controller × supply voltage × motor) is analysed for the PI con
 | PI (Kd = 0) | Infinite | 90.1° | 3.93 rad/s (0.63 Hz) |
 | PID (Kd = 0.005) | Infinite | 120.6° | 50,760 rad/s (8,079 Hz) |
 
-**Conclusion.** The gain margin is infinite in both cases because the phase never reaches −180°, and both phase margins are healthy. However, the PID crossover is at about 8 kHz, in the electrical frequency range. A real digital controller would need a sample rate far above that, and the averaged PWM model from Step 3b is not valid that close to the 20 kHz switching frequency. The PI crossover is at about 4 rad/s, in the mechanical range, and is easy to implement. The D term is therefore not earning its place: in Step 4 it was the anti-windup, not the D term, that removed the overshoot.
+**Conclusion.** The gain margin is infinite in both cases because the phase never reaches −180°, and both phase margins are healthy. However, the PID crossover is at about 8 kHz, in the electrical frequency range. A real digital controller would need a sample rate far above that. The PI crossover is at about 4 rad/s, in the mechanical range, and is easy to implement. The D term is therefore not earning its place: in Step 4 it was the anti-windup, not the D term, that removed the overshoot.
+
+### Step 6: Simulink rebuild
+
+The open-loop motor model from Step 2 is rebuilt in Simulink from basic blocks (Sum, Gain and Integrator), rather than a ready-made motor block. Each block maps directly to a term in the two equations:
+
+- Electrical: L · di/dt = V − R·i − Ke·ω
+- Mechanical: J · dω/dt = Kt·i − b·ω
+
+A Step block applies V = 5 V at t = 0, and two To Workspace blocks record speed (`omega_sim`) and current (`i_sim`). The parameters live in `simulink/params.m`, which must run before simulating. It is wired to the model's PreLoadFcn, so it runs automatically when the model is opened.
+
+### Step 7: Python vs Simulink comparison
+
+![Step 7 Python vs Simulink](figures/step7_comparison.png)
+
+Both tools simulate the same 5 V open-loop spin-up for 30 s. Speed is shown in rad/s here: the final 1,904.4 rad/s equals about 18,186 rpm, matching Step 2. The two curves lie on top of each other. The largest difference is 0.25 rad/s, which is 0.013% of the final speed. The remaining difference comes from the two solvers taking different time steps (Simulink's variable-step solver against Python's `solve_ivp`), not from the model itself.
 
 ## How to run
 
@@ -147,9 +170,10 @@ python src/step3b_average_vs_pwm.py
 python src/step3c_current_limit.py
 python src/step4_pid.py
 python src/step5_bode.py
+python src/step7_python_vs_simulink.py
 ```
 
-Each script opens a plot window and saves its figures to `figures/`.
+Each script opens a plot window and saves its figures to `figures/`. Step 7 reads the Simulink results already exported to `simulink/*.csv`, so it does not need MATLAB. To re-run the Simulink model itself, open `simulink/step6_motor_simulink.slx` in MATLAB (`params.m` loads automatically) and run the simulation.
 
 ## Repository layout
 
@@ -163,6 +187,19 @@ src/
   step3c_current_limit.py   # Step 3c: current limit demo
   step4_pid.py              # Step 4: P, PI and PID speed control, with and without anti-windup
   step5_bode.py             # Step 5: open-loop Bode plots and stability margins (PI and PID)
+  step7_python_vs_simulink.py  # Step 7: compare Simulink results with Python
 figures/                  # plots saved by the scripts
-simulink/                 # Step 6 models (placeholder)
+simulink/
+  step6_motor_simulink.slx  # Step 6: motor model built from basic blocks
+  params.m                  # model parameters (runs on model load)
+  simulink_speed.csv        # exported Simulink speed [rad/s] (time, value)
+  simulink_current.csv      # exported Simulink current [A] (time, value)
 ```
+
+## Next steps
+
+This model is intended as the foundation for a planned bachelor thesis on fault injection in drive controllers. The idea is to inject simulated bit flips into the control loop (for example into the speed measurement, the controller state or the duty-cycle command) and measure the mechanical consequences: speed error, torque ripple and stall. None of this has been implemented yet.
+
+---
+
+**On tooling.** I used Claude as an assistant for this project: for working through the theory, debugging, repository setup and documentation. The modelling decisions, parameter choices and the analysis conclusions are my own, and I ran and checked every result in the repo.
