@@ -35,4 +35,5 @@ Thumbs.db
 slprj/
 *.slxc
 *.asv
+*.slx.autosave
 *.autosave
