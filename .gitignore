@@ -37,3 +37,4 @@ slprj/
 *.asv
 *.slx.autosave
 *.autosave
+*.mat
